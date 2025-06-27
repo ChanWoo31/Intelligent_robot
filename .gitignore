@@ -1,0 +1,55 @@
+# ===== ROS2 / colcon artifacts =====
+build/
+install/
+log/
+
+# ===== Python =====
+# 컴파일된 바이트코드
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 가상환경
+.venv/
+env/
+venv/
+.ENV/
+
+# 패키지 메타
+*.egg-info/
+dist/
+build/
+
+# ===== Editor / IDE =====
+# VSCode
+.vscode/
+# 기타
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# swap / temporary
+*~
+*.swp
+*.bak
+*.tmp
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== C/C++ / cmake =====
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.a
+*.o
+*.so
+*.dylib
+
+# ===== 기타 =====
+# 로그 파일
+*.log
+# core dump
+core.*

@@ -1,0 +1,3 @@
+[console_scripts]
+stepper_bridge = my_stepper_pkg.stepper_bridge:main
+
