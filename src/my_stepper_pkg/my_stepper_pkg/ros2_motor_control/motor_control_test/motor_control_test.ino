@@ -9,27 +9,69 @@ const float STEP_MM = LEADSCREW_PITCH / STEPS_PER_REV;
 const float HOMING_BACKOFF_MM = 1.0;
 const long BACKOFF_STEPS = lround(HOMING_BACKOFF_MM / STEP_MM);
 
-#define ENABLE_PIN_1 28
-#define DIR_PIN_1 29
-#define STEP_PIN_1 30
+#define ENABLE_PIN_1 30
+#define DIR_PIN_1 31
+#define STEP_PIN_1 32
 
-#define ENABLE_PIN_2 32
-#define DIR_PIN_2 33
-#define STEP_PIN_2 34
+#define ENABLE_PIN_2 34
+#define DIR_PIN_2 35
+#define STEP_PIN_2 36
 
-#define ENABLE_PIN_3 36
-#define DIR_PIN_3 37
-#define STEP_PIN_3 38
-
+#define ENABLE_PIN_3 38
+#define DIR_PIN_3 39
+#define STEP_PIN_3 40
 
 #define HOME_SWITCH1 22
 #define HOME_SWITCH2 23
 #define HOME_SWITCH3 24
 #define HOME_SWITCH4 25
+#define HOME_SWITCH5 26
+#define HOME_SWITCH6 27
 
 AccelStepper stepper_1(AccelStepper::DRIVER, STEP_PIN_1, DIR_PIN_1);
 AccelStepper stepper_2(AccelStepper::DRIVER, STEP_PIN_2, DIR_PIN_2);
 AccelStepper stepper_3(AccelStepper::DRIVER, STEP_PIN_3, DIR_PIN_3);
+
+long endSteps1 = 0, endSteps2 = 0;
+long returnSteps1 = 0, returnSteps2 = 0;
+
+const float HOMING_SPEED = 500;
+
+void homeEndstop(AccelStepper &mA, int swA, AccelStepper &mB, int swB, float speed) {
+  bool doneA = false, doneB = false;
+  mA.setSpeed(speed);
+  mB.setSpeed(speed);
+
+  while(!(doneA && doneB)) {
+    if(!doneA) {
+      if (digitalRead(swA) == HIGH) {
+        mA.runSpeed();
+      } else {
+        mA.stop();
+        doneA = true;
+        Serial.print("motor");
+        Serial.print(&mA == &stepper_1 ? "1" : "2");
+        Serial.println("homing success");
+      }
+    }
+    if (!doneB) {
+      if (digitalRead(swB) == HIGH) {
+        mB.runSpeed();
+      } else {
+        mB.stop();
+        doneB = true;
+        Serial.print("motor");
+        Serial.print(&mB == &stepper_1 ? "1" : "2");
+        Serial.println("homing success");
+      }
+    }
+  }
+  while (mA.isRunning() || mB.isRunning()) {
+    mA.run();
+    mB.run();
+  }
+}
+
 
 void setup() {
   Serial.begin(115200);
@@ -57,6 +99,8 @@ void setup() {
   pinMode(HOME_SWITCH2, INPUT_PULLUP);
   pinMode(HOME_SWITCH3, INPUT_PULLUP);
   pinMode(HOME_SWITCH4, INPUT_PULLUP);
+  pinMode(HOME_SWITCH5, INPUT_PULLUP);
+  pinMode(HOME_SWITCH6, INPUT_PULLUP);
 
   // AccelStepper 설정
   stepper_1.setMaxSpeed(4000);
@@ -68,65 +112,33 @@ void setup() {
   stepper_3.setMaxSpeed(4000);
   stepper_3.setAcceleration(2000);
 
-  // 호밍속도
-  stepper_1.setSpeed(1000);
-  stepper_2.setSpeed(1000);
-  stepper_3.setSpeed(1000);
-
   //초기 위치 호밍
 
-  Serial.println("Origin Homing..");
-  while (digitalRead(HOME_SWITCH1) == HIGH || digitalRead(HOME_SWITCH3) == HIGH) {
-    stepper_1.runSpeed();
-    stepper_2.runSpeed();
-  }
-  delay(20);
-  
-  if (digitalRead(HOME_SWITCH1) == LOW && digitalRead(HOME_SWITCH3) == LOW) {
-    Serial.println("스위치 눌림");
-  }
-  stepper_1.stop();
-  stepper_2.stop();
-  delay(20);
+  Serial.println("setup started");
 
-//  stepper_1.moveTo(BACKOFF_STEPS);
-//  stepper_2.moveTo(BACKOFF_STEPS);
-//  while (stepper_1.distanceToGo() != 0 || stepper_2.distanceToGo() != 0) {
-//    stepper_1.run();
-//    stepper_2.run();
-//  }
-//  delay(100);
-  
+  homeEndstop(stepper_1, HOME_SWITCH1, stepper_2, HOME_SWITCH3, HOMING_SPEED);
   stepper_1.setCurrentPosition(0);
   stepper_2.setCurrentPosition(0);
-
-  stepper_1.setSpeed(-500);
-  stepper_2.setSpeed(-500);
+  Serial.println("homing success. start line.");
 
   // 종단 위치 호밍
-  while (digitalRead(HOME_SWITCH2) == HIGH && digitalRead(HOME_SWITCH4) == HIGH) {
-    stepper_1.runSpeed();
-    stepper_2.runSpeed();
+  homeEndstop(stepper_1, HOME_SWITCH2, stepper_2, HOME_SWITCH4, -HOMING_SPEED);
+
+  endSteps1 = abs(stepper_1.currentPosition());
+  endSteps2 = abs(stepper_2.currentPosition());
+  Serial.print("from start to end using steps 1 : "); Serial.println(endSteps1);
+  Serial.print("from start to end using steps 2 : "); Serial.println(endSteps2);
+
+  // 다시 초기 위치 복귀
+  stepper_1.moveTo(0);
+  stepper_2.moveTo(0);
+
+  returnSteps1 = abs(stepper_1.distanceToGo());
+  returnSteps2 = abs(stepper_2.distanceToGo());
+  while (stepper_1.distanceToGo() != 0 || stepper_2.distanceToGo() != 0) {
+    stepper_1.run();
+    stepper_2.run();
   }
-  delay(20);
-
-  if (digitalRead(HOME_SWITCH2) == LOW && digitalRead(HOME_SWITCH4) == LOW) {
-    Serial.println("스위치 눌림");
-  }
-  stepper_1.stop();
-  stepper_2.stop();
-  delay(20);
-
-  long maxstep_motor_1, maxstep_motor_2;
-
-  maxstep_motor_1 = stepper_1.currentPosition();
-  maxstep_motor_2 = stepper_2.currentPosition();
-  
-  Serial.println("Homing success");
-  Serial.print("first motor : ");
-  Serial.println(maxstep_motor_1);
-  Serial.print("second motor : ");
-  Serial.println(maxstep_motor_2);
 }
 
 void loop() {
@@ -156,3 +168,4 @@ void loop() {
   }
 
 }
+
