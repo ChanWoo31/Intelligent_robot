@@ -156,7 +156,7 @@ void setup() {
   }
 
   homeEndstop2(stepper_3, HOME_SWITCH5, HOME_SWITCH6, HOMING_SPEED);
-  endSteps3 = abs(stepper_1.currentPosition());
+  endSteps3 = abs(stepper_3.currentPosition());
   Serial.print("from start to end using steps 3 : "); Serial.println(endSteps3);
   stepper_3.moveTo(0);
   returnSteps3 = abs(stepper_3.distanceToGo());
