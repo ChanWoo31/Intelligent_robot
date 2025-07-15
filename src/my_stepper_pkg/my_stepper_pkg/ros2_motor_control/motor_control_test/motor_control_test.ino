@@ -32,8 +32,8 @@ AccelStepper stepper_1(AccelStepper::DRIVER, STEP_PIN_1, DIR_PIN_1);
 AccelStepper stepper_2(AccelStepper::DRIVER, STEP_PIN_2, DIR_PIN_2);
 AccelStepper stepper_3(AccelStepper::DRIVER, STEP_PIN_3, DIR_PIN_3);
 
-long endSteps1 = 0, endSteps2 = 0;
-long returnSteps1 = 0, returnSteps2 = 0;
+long endSteps1 = 0, endSteps2 = 0, endSteps3 = 0;
+long returnSteps1 = 0, returnSteps2 = 0, returnSteps3 = 0;
 
 const float HOMING_SPEED = 500;
 
@@ -69,6 +69,21 @@ void homeEndstop(AccelStepper &mA, int swA, AccelStepper &mB, int swB, float spe
   while (mA.isRunning() || mB.isRunning()) {
     mA.run();
     mB.run();
+  }
+}
+
+void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
+  bool doneA = false;
+  mA.setSpeed(speed);
+
+  if (digitalRead(swA) == HIGH) {
+    mA.runSpeed();
+  } else {
+    mA.stop();
+    Serial.print("motor homing success");
+  }
+  while (mA.isRunning()){
+    mA.run();
   }
 }
 
@@ -139,6 +154,16 @@ void setup() {
     stepper_1.run();
     stepper_2.run();
   }
+
+  homeEndstop2(stepper_3, HOME_SWITCH5, HOME_SWITCH6, HOMING_SPEED);
+  endSteps3 = abs(stepper_1.currentPosition());
+  Serial.print("from start to end using steps 3 : "); Serial.println(endSteps3);
+  stepper_3.moveTo(0);
+  returnSteps3 = abs(stepper_3.distanceToGo());
+  while (stepper_3.distanceToGo() != 0) {
+    stepper_3.run();
+  }
+  
 }
 
 void loop() {
@@ -168,4 +193,3 @@ void loop() {
   }
 
 }
-
