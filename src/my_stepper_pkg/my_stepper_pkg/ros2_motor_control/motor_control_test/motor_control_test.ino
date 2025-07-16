@@ -35,7 +35,7 @@ AccelStepper stepper_3(AccelStepper::DRIVER, STEP_PIN_3, DIR_PIN_3);
 long endSteps1 = 0, endSteps2 = 0, endSteps3 = 0;
 long returnSteps1 = 0, returnSteps2 = 0, returnSteps3 = 0;
 
-const float HOMING_SPEED = 500;
+const float HOMING_SPEED = 2000;
 
 void homeEndstop(AccelStepper &mA, int swA, AccelStepper &mB, int swB, float speed) {
   bool doneA = false, doneB = false;
@@ -66,25 +66,55 @@ void homeEndstop(AccelStepper &mA, int swA, AccelStepper &mB, int swB, float spe
       }
     }
   }
-  while (mA.isRunning() || mB.isRunning()) {
-    mA.run();
-    mB.run();
-  }
+//  while (mA.isRunning() || mB.isRunning()) {
+//    mA.run();
+//    mB.run();
+//  }
 }
 
 void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
-  bool doneA = false;
-  mA.setSpeed(speed);
-
+  mA.setSpeed(-speed);
+  // 처음 위치로 와서 0점 맞추기.
   if (digitalRead(swA) == HIGH) {
     mA.runSpeed();
-  } else {
-    mA.stop();
-    Serial.print("motor homing success");
   }
+  while (digitalRead(swA) == HIGH) {
+    mA.runSpeed();
+    delayMicroseconds(50);
+  }
+  mA.stop();
+  mA.setCurrentPosition(0);
+  Serial.println("motor homing start position");
+  
   while (mA.isRunning()){
     mA.run();
   }
+
+  // 최종 위치로 가기
+  mA.setSpeed(speed);
+  if (digitalRead(swB) == HIGH) {
+    mA.runSpeed();
+  }
+  while (digitalRead(swB) == HIGH) {
+    mA.runSpeed();
+    delayMicroseconds(50);
+  }
+  mA.stop();
+  mA.setCurrentPosition(0);
+  Serial.println("motor3 homing start position");
+  
+  while (mA.isRunning()){
+    mA.run();
+  }
+  
+  endSteps3 = abs(stepper_3.currentPosition());
+  Serial.print("from start to end using steps 3 : "); Serial.println(endSteps3);
+  stepper_3.moveTo(0);
+  returnSteps3 = abs(stepper_3.distanceToGo());
+  while (stepper_3.distanceToGo() != 0) {
+    stepper_3.run();
+  }
+  
 }
 
 
@@ -156,13 +186,6 @@ void setup() {
   }
 
   homeEndstop2(stepper_3, HOME_SWITCH5, HOME_SWITCH6, HOMING_SPEED);
-  endSteps3 = abs(stepper_3.currentPosition());
-  Serial.print("from start to end using steps 3 : "); Serial.println(endSteps3);
-  stepper_3.moveTo(0);
-  returnSteps3 = abs(stepper_3.distanceToGo());
-  while (stepper_3.distanceToGo() != 0) {
-    stepper_3.run();
-  }
   
 }
 
