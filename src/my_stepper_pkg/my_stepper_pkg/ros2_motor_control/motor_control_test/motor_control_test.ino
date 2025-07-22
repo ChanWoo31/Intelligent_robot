@@ -24,9 +24,9 @@ AccelStepper stepper_1(AccelStepper::DRIVER, STEP_PIN_1, DIR_PIN_1);
 AccelStepper stepper_2(AccelStepper::DRIVER, STEP_PIN_2, DIR_PIN_2);
 AccelStepper stepper_3(AccelStepper::DRIVER, STEP_PIN_3, DIR_PIN_3);
 
-long endSteps1 = 0, endSteps2 = 0, endSteps3 = 0;
-long returnSteps1 = 0, returnSteps2 = 0, returnSteps3 = 0;
-long stepPerMmX = 0, stepPerMmY = 0;
+long endSteps1 = 0, endSteps2 = 0, endStepsY = 0;
+long returnSteps1 = 0, returnSteps2 = 0, returnStepsY = 0;
+long stepPerMmX1 = 0, stepPerMmX2 = 0, stepPerMmY = 0;
 
 const float HOMING_SPEED = 2000;
 
@@ -70,6 +70,7 @@ void homeEndstop(AccelStepper &mA, int swA, AccelStepper &mB, int swB, float spe
 }
 
 void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
+  Serial.print("start");
   mA.setSpeed(-speed);
   // 처음 위치로 와서 0점 맞추기.
   if (digitalRead(swA) == HIGH) {
@@ -83,9 +84,9 @@ void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
   mA.setCurrentPosition(0);
   Serial.println("motor homing start position");
   
-  while (mA.isRunning()){
-    mA.run();
-  }
+//  while (mA.isRunning()){
+//    mA.run();
+//  }
 
   // 최종 위치로 가기
   mA.setSpeed(speed);
@@ -97,21 +98,19 @@ void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
     delayMicroseconds(50);
   }
   mA.stop();
-  mA.setCurrentPosition(0);
-  Serial.println("motor3 homing start position");
-  
-  while (mA.isRunning()){
-    mA.run();
-  }
-  
-  endSteps3 = abs(stepper_3.currentPosition());
-  Serial.print("from start to end using steps 3 : "); Serial.println(endSteps3);
-  stepper_3.moveTo(0);
-  returnSteps3 = abs(stepper_3.distanceToGo());
-  while (stepper_3.distanceToGo() != 0) {
-    stepper_3.run();
-  }
 
+  endStepsY = abs(mA.currentPosition());
+  Serial.print("Y-axis travel steps: "); Serial.println(endStepsY);
+  
+//  while (mA.isRunning()){
+//    mA.run();
+//  }
+
+  mA.moveTo(0);
+//  while (mA.distanceToGo() != 0) {
+//    mA.run();
+//  }
+  Serial.println("Y-home complete");
   
   
 }
@@ -145,6 +144,8 @@ void setup() {
   pinMode(HOME_SWITCH4, INPUT_PULLUP);
   pinMode(HOME_SWITCH5, INPUT_PULLUP);
   pinMode(HOME_SWITCH6, INPUT_PULLUP);
+
+  
 
   // AccelStepper 설정
   stepper_1.setMaxSpeed(4000);
@@ -186,34 +187,36 @@ void setup() {
 
   homeEndstop2(stepper_3, HOME_SWITCH5, HOME_SWITCH6, HOMING_SPEED);
 
-  stepPerMmX = endSteps1 / MAX_X_MM;
-  stepPerMmY = endSteps2 / MAX_Y_MM;
+  stepper_1.setPinsInverted(true, false);
+  stepper_2.setPinsInverted(true, false);
+
+  stepPerMmX1 = endSteps1 / MAX_X_MM;
+  stepPerMmX2 = endSteps2 / MAX_X_MM;
+  stepPerMmY = endStepsY / MAX_Y_MM;
 }
 
 void loop() {
   if (Serial.available()) {
     String line = Serial.readStringUntil('\n');
-    line.trim();
-    //
-    Serial.print("Recv >");
-    Serial.println(line);
-    //
     int comma = line.indexOf(',');
-    if (comma < 0) return;
-
     float x_mm = line.substring(0, comma).toFloat();
     float y_mm = line.substring(comma + 1).toFloat();
 
-    long target1 = lround(x_mm * MAX_X_MM);
-    long target2 = lround(y_mm * MAX_Y_MM);
+    long targetX1 = lround(x_mm * stepPerMmX1);
+    long targetX2 = lround(x_mm * stepPerMmX2);
+    long targetY = lround(y_mm * stepPerMmY);
 
-    stepper_1.moveTo(target1);
-    stepper_2.moveTo(target2);
+    stepper_1.moveTo(targetX1);
+    stepper_2.moveTo(targetX2);
+    stepper_3.moveTo(targetY);
+//    Serial.print("x, y, z : "); Serial.print(stepper_1.currentPosition()); Serial.print(" ");
+//    Serial.print(stepper_2.currentPosition()); Serial.print(" ");
+//    Serial.println(stepper_3.currentPosition());
+    
   }
 
-  if (stepper_1.distanceToGo() != 0 || stepper_2.distanceToGo() != 0) {
-    stepper_1.run();
-    stepper_2.run();
-  }
+  if (stepper_1.distanceToGo() != 0) stepper_1.run();
+  if (stepper_2.distanceToGo() != 0) stepper_2.run();
+  if (stepper_3.distanceToGo() != 0) stepper_3.run();
 
 }
