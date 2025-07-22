@@ -1,13 +1,5 @@
 #include <AccelStepper.h>
 
-// 파라미터
-const long STEPS_PER_REV = 3200; //모터 회전당 스텝 
-const float LEADSCREW_PITCH = 2.0; // mm/회전
-
-const float STEP_MM = LEADSCREW_PITCH / STEPS_PER_REV;
-
-const float HOMING_BACKOFF_MM = 1.0;
-const long BACKOFF_STEPS = lround(HOMING_BACKOFF_MM / STEP_MM);
 
 #define ENABLE_PIN_1 30
 #define DIR_PIN_1 31
@@ -34,8 +26,13 @@ AccelStepper stepper_3(AccelStepper::DRIVER, STEP_PIN_3, DIR_PIN_3);
 
 long endSteps1 = 0, endSteps2 = 0, endSteps3 = 0;
 long returnSteps1 = 0, returnSteps2 = 0, returnSteps3 = 0;
+long stepPerMmX = 0, stepPerMmY = 0;
 
 const float HOMING_SPEED = 2000;
+
+const int MAX_X_MM = 750;
+const int MAX_Y_MM = 500;
+const int MAX_Z_MM = 430;
 
 void homeEndstop(AccelStepper &mA, int swA, AccelStepper &mB, int swB, float speed) {
   bool doneA = false, doneB = false;
@@ -114,6 +111,8 @@ void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
   while (stepper_3.distanceToGo() != 0) {
     stepper_3.run();
   }
+
+  
   
 }
 
@@ -186,7 +185,9 @@ void setup() {
   }
 
   homeEndstop2(stepper_3, HOME_SWITCH5, HOME_SWITCH6, HOMING_SPEED);
-  
+
+  stepPerMmX = endSteps1 / MAX_X_MM;
+  stepPerMmY = endSteps2 / MAX_Y_MM;
 }
 
 void loop() {
@@ -203,8 +204,8 @@ void loop() {
     float x_mm = line.substring(0, comma).toFloat();
     float y_mm = line.substring(comma + 1).toFloat();
 
-    long target1 = lround(x_mm / STEP_MM);
-    long target2 = lround(y_mm / STEP_MM);
+    long target1 = lround(x_mm * MAX_X_MM);
+    long target2 = lround(y_mm * MAX_Y_MM);
 
     stepper_1.moveTo(target1);
     stepper_2.moveTo(target2);
