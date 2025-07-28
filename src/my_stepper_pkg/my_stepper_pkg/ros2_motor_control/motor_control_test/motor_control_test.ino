@@ -1,4 +1,5 @@
 #include <AccelStepper.h>
+#include <NewPing.h>
 
 
 #define ENABLE_PIN_1 30
@@ -19,6 +20,9 @@
 #define HOME_SWITCH4 25
 #define HOME_SWITCH5 26
 #define HOME_SWITCH6 27
+
+#define TRIG_PIN 8
+#define ECHO_PIN 9
 
 AccelStepper stepper_1(AccelStepper::DRIVER, STEP_PIN_1, DIR_PIN_1);
 AccelStepper stepper_2(AccelStepper::DRIVER, STEP_PIN_2, DIR_PIN_2);
@@ -117,7 +121,7 @@ void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
 
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(1000000);
   // 모터1
   pinMode(ENABLE_PIN_1, OUTPUT);
   pinMode(DIR_PIN_1, OUTPUT);
