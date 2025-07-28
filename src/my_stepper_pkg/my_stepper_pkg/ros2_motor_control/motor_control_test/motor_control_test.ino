@@ -1,7 +1,7 @@
 #include <AccelStepper.h>
 #include <NewPing.h>
 
-
+//스텝모터, 스위치 핀 정의
 #define ENABLE_PIN_1 30
 #define DIR_PIN_1 31
 #define STEP_PIN_1 32
@@ -21,13 +21,23 @@
 #define HOME_SWITCH5 26
 #define HOME_SWITCH6 27
 
+//초음파 센서 설정 
 #define TRIG_PIN 8
 #define ECHO_PIN 9
+#define MAX_DIST_CM 200
+#define ULTRA_INTERVAL_MS 100
+NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DIST_CM);
+unsigned long lastUltraTime = 0;
+
+//진공펌프 설정
+
 
 AccelStepper stepper_1(AccelStepper::DRIVER, STEP_PIN_1, DIR_PIN_1);
 AccelStepper stepper_2(AccelStepper::DRIVER, STEP_PIN_2, DIR_PIN_2);
 AccelStepper stepper_3(AccelStepper::DRIVER, STEP_PIN_3, DIR_PIN_3);
 
+
+//스텝모터 설정 
 long endSteps1 = 0, endSteps2 = 0, endStepsY = 0;
 long returnSteps1 = 0, returnSteps2 = 0, returnStepsY = 0;
 long stepPerMmX1 = 0, stepPerMmX2 = 0, stepPerMmY = 0;
@@ -200,6 +210,13 @@ void setup() {
 }
 
 void loop() {
+  // 초음파 측정 & 전송
+  if (millis() - lastUltraTime >= ULTRA_INTERVAL_MS) {
+    lastUltraTime = millis();
+    unsigned int dist_mm = sonar.ping_cm() * 10;
+    Serial.print("DIST:");
+    Serial.println(dist_mm);
+  }
   if (Serial.available()) {
     String line = Serial.readStringUntil('\n');
     int comma = line.indexOf(',');
@@ -213,10 +230,7 @@ void loop() {
     stepper_1.moveTo(targetX1);
     stepper_2.moveTo(targetX2);
     stepper_3.moveTo(targetY);
-//    Serial.print("x, y, z : "); Serial.print(stepper_1.currentPosition()); Serial.print(" ");
-//    Serial.print(stepper_2.currentPosition()); Serial.print(" ");
-//    Serial.println(stepper_3.currentPosition());
-    
+    Serial.println("DONE");
   }
 
   if (stepper_1.distanceToGo() != 0) stepper_1.run();
