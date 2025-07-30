@@ -53,3 +53,5 @@ Makefile
 *.log
 # core dump
 core.*
+
+src/ros2arduino/

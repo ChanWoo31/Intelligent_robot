@@ -1,7 +1,7 @@
 #include <AccelStepper.h>
 #include <NewPing.h>
 
-//스텝모터, 스위치 핀 정의
+// 스텝모터, 스위치 핀 정의
 #define ENABLE_PIN_1 30
 #define DIR_PIN_1 31
 #define STEP_PIN_1 32
@@ -21,7 +21,7 @@
 #define HOME_SWITCH5 26
 #define HOME_SWITCH6 27
 
-//초음파 센서 설정 
+// 초음파 센서 설정
 #define TRIG_PIN 8
 #define ECHO_PIN 9
 #define MAX_DIST_CM 200
@@ -29,15 +29,14 @@
 NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DIST_CM);
 unsigned long lastUltraTime = 0;
 
-//진공펌프 설정
+// 진공펌프 설정 (필요 시 정의 추가)
 
-
+// 스텝모터 객체 생성
 AccelStepper stepper_1(AccelStepper::DRIVER, STEP_PIN_1, DIR_PIN_1);
 AccelStepper stepper_2(AccelStepper::DRIVER, STEP_PIN_2, DIR_PIN_2);
 AccelStepper stepper_3(AccelStepper::DRIVER, STEP_PIN_3, DIR_PIN_3);
 
-
-//스텝모터 설정 
+// 위치 계산용 변수
 long endSteps1 = 0, endSteps2 = 0, endStepsY = 0;
 long returnSteps1 = 0, returnSteps2 = 0, returnStepsY = 0;
 long stepPerMmX1 = 0, stepPerMmX2 = 0, stepPerMmY = 0;
@@ -48,13 +47,14 @@ const int MAX_X_MM = 750;
 const int MAX_Y_MM = 500;
 const int MAX_Z_MM = 430;
 
+// X축, Z축 호밍
 void homeEndstop(AccelStepper &mA, int swA, AccelStepper &mB, int swB, float speed) {
   bool doneA = false, doneB = false;
   mA.setSpeed(speed);
   mB.setSpeed(speed);
 
-  while(!(doneA && doneB)) {
-    if(!doneA) {
+  while (!(doneA && doneB)) {
+    if (!doneA) {
       if (digitalRead(swA) == HIGH) {
         mA.runSpeed();
       } else {
@@ -62,7 +62,7 @@ void homeEndstop(AccelStepper &mA, int swA, AccelStepper &mB, int swB, float spe
         doneA = true;
         Serial.print("motor");
         Serial.print(&mA == &stepper_1 ? "1" : "2");
-        Serial.println("homing success");
+        Serial.println(" homing success");
       }
     }
     if (!doneB) {
@@ -73,20 +73,16 @@ void homeEndstop(AccelStepper &mA, int swA, AccelStepper &mB, int swB, float spe
         doneB = true;
         Serial.print("motor");
         Serial.print(&mB == &stepper_1 ? "1" : "2");
-        Serial.println("homing success");
+        Serial.println(" homing success");
       }
     }
   }
-//  while (mA.isRunning() || mB.isRunning()) {
-//    mA.run();
-//    mB.run();
-//  }
 }
 
+// Y축 전/후 종단 호밍
 void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
   Serial.print("start");
   mA.setSpeed(-speed);
-  // 처음 위치로 와서 0점 맞추기.
   if (digitalRead(swA) == HIGH) {
     mA.runSpeed();
   }
@@ -97,12 +93,7 @@ void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
   mA.stop();
   mA.setCurrentPosition(0);
   Serial.println("motor homing start position");
-  
-//  while (mA.isRunning()){
-//    mA.run();
-//  }
 
-  // 최종 위치로 가기
   mA.setSpeed(speed);
   if (digitalRead(swB) == HIGH) {
     mA.runSpeed();
@@ -115,43 +106,21 @@ void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
 
   endStepsY = abs(mA.currentPosition());
   Serial.print("Y-axis travel steps: "); Serial.println(endStepsY);
-  
-//  while (mA.isRunning()){
-//    mA.run();
-//  }
 
   mA.moveTo(0);
-//  while (mA.distanceToGo() != 0) {
-//    mA.run();
-//  }
   Serial.println("Y-home complete");
-  
-  
 }
-
 
 void setup() {
   Serial.begin(1000000);
-  // 모터1
+
   pinMode(ENABLE_PIN_1, OUTPUT);
-  pinMode(DIR_PIN_1, OUTPUT);
-  pinMode(STEP_PIN_1, OUTPUT);
-
-  // 모터2
   pinMode(ENABLE_PIN_2, OUTPUT);
-  pinMode(DIR_PIN_2, OUTPUT);
-  pinMode(STEP_PIN_2, OUTPUT);
-
-  // 모터3
   pinMode(ENABLE_PIN_3, OUTPUT);
-  pinMode(DIR_PIN_3, OUTPUT);
-  pinMode(STEP_PIN_3, OUTPUT);
-
   digitalWrite(ENABLE_PIN_1, HIGH);
   digitalWrite(ENABLE_PIN_2, HIGH);
   digitalWrite(ENABLE_PIN_3, HIGH);
 
-  //스위치 풀업
   pinMode(HOME_SWITCH1, INPUT_PULLUP);
   pinMode(HOME_SWITCH2, INPUT_PULLUP);
   pinMode(HOME_SWITCH3, INPUT_PULLUP);
@@ -159,19 +128,12 @@ void setup() {
   pinMode(HOME_SWITCH5, INPUT_PULLUP);
   pinMode(HOME_SWITCH6, INPUT_PULLUP);
 
-  
-
-  // AccelStepper 설정
   stepper_1.setMaxSpeed(4000);
   stepper_1.setAcceleration(2000);
-
   stepper_2.setMaxSpeed(4000);
   stepper_2.setAcceleration(2000);
-
   stepper_3.setMaxSpeed(4000);
   stepper_3.setAcceleration(2000);
-
-  //초기 위치 호밍
 
   Serial.println("setup started");
 
@@ -180,7 +142,6 @@ void setup() {
   stepper_2.setCurrentPosition(0);
   Serial.println("homing success. start line.");
 
-  // 종단 위치 호밍
   homeEndstop(stepper_1, HOME_SWITCH2, stepper_2, HOME_SWITCH4, -HOMING_SPEED);
 
   endSteps1 = abs(stepper_1.currentPosition());
@@ -188,12 +149,11 @@ void setup() {
   Serial.print("from start to end using steps 1 : "); Serial.println(endSteps1);
   Serial.print("from start to end using steps 2 : "); Serial.println(endSteps2);
 
-  // 다시 초기 위치 복귀
   stepper_1.moveTo(0);
   stepper_2.moveTo(0);
-
   returnSteps1 = abs(stepper_1.distanceToGo());
   returnSteps2 = abs(stepper_2.distanceToGo());
+
   while (stepper_1.distanceToGo() != 0 || stepper_2.distanceToGo() != 0) {
     stepper_1.run();
     stepper_2.run();
@@ -210,13 +170,15 @@ void setup() {
 }
 
 void loop() {
-  // 초음파 측정 & 전송
+  // 초음파 거리 측정
   if (millis() - lastUltraTime >= ULTRA_INTERVAL_MS) {
     lastUltraTime = millis();
     unsigned int dist_mm = sonar.ping_cm() * 10;
     Serial.print("DIST:");
     Serial.println(dist_mm);
   }
+
+  // 시리얼 명령 처리
   if (Serial.available()) {
     String line = Serial.readStringUntil('\n');
     int comma = line.indexOf(',');
@@ -236,5 +198,4 @@ void loop() {
   if (stepper_1.distanceToGo() != 0) stepper_1.run();
   if (stepper_2.distanceToGo() != 0) stepper_2.run();
   if (stepper_3.distanceToGo() != 0) stepper_3.run();
-
 }

@@ -24,7 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'stepper_bridge = my_stepper_pkg.stepper_bridge:main'
+            'serial_bridge = my_stepper_pkg.serial_bridge:main',
+            'z_control = my_stepper_pkg.z_control:main',
         ],
     },
 )

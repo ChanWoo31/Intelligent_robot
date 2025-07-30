@@ -9,6 +9,8 @@ const float STEP_MM = LEADSCREW_PITCH / STEPS_PER_REV;
 const float HOMING_BACKOFF_MM = 1.0;
 const long BACKOFF_STEPS = lround(HOMING_BACKOFF_MM / STEP_MM);
 
+const long MAX_STEPS = 2000000;
+
 #define DIR_PIN_1 33
 #define STEP_PIN_1 34
 #define ENABLE_PIN_1 32
@@ -52,15 +54,22 @@ void setup() {
   stepper_2.setSpeed(-1000);
 
   Serial.println("Homing..");
-  while (digitalRead(HOME_SWITCH) == HIGH) {
-    stepper_1.runSpeed();
-    stepper_2.runSpeed();
+//  while (digitalRead(HOME_SWITCH) == HIGH) {
+//    stepper_1.runSpeed();
+//    stepper_2.runSpeed();
+//  }
+//  delay(20);
+  stepper_1.moveTo(-100000);
+  while (digitalRead(HOME_SWITCH) == HIGH) stepper_1.run();
+
+  unsigned long t0 = millis();
+  while (digitalRead(HOME_SWITCH)==LOW && millis() - t0 < 50) {
+    delay(1);
   }
-  delay(20);
   
-  if (digitalRead(HOME_SWITCH) == LOW) {
-    Serial.println("스위치 눌림");
-  }
+//  if (digitalRead(HOME_SWITCH) == LOW) {
+//    Serial.println("스위치 눌림");
+//  }
   stepper_1.stop();
   stepper_2.stop();
   delay(20);
@@ -96,13 +105,12 @@ void loop() {
     long target1 = lround(x_mm / STEP_MM);
     long target2 = lround(y_mm / STEP_MM);
 
-    stepper_1.moveTo(target1);
-    stepper_2.moveTo(target2);
-  }
+    target1 = constrain(target1, 0, MAX_STEPS);
+    target2 = constrain(target2, 0, MAX_STEPS);
 
-  if (stepper_1.distanceToGo() != 0 || stepper_2.distanceToGo() != 0) {
-    stepper_1.run();
-    stepper_2.run();
-  }
+    while (stepper_1.isRunning() || stepper_2.isRunning()) {
+      stepper_1.run();
+      stepper_2.run();
+    }
 
 }

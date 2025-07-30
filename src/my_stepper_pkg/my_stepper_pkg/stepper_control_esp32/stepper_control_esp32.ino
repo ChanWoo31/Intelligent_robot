@@ -9,13 +9,14 @@ const float STEP_MM = LEADSCREW_PITCH / STEPS_PER_REV;
 const float HOMING_BACKOFF_MM = 1.0;
 const long BACKOFF_STEPS = lround(HOMING_BACKOFF_MM / STEP_MM);
 
+#define ENABLE_PIN_1 17
 #define DIR_PIN_1 18
 #define STEP_PIN_1 19
-#define ENABLE_PIN_1 17
 
-#define DIR_PIN_2 23
-#define STEP_PIN_2 22
 #define ENABLE_PIN_2 21
+#define DIR_PIN_2 22
+#define STEP_PIN_2 23
+
 
 #define HOME_SWITCH 27
 
