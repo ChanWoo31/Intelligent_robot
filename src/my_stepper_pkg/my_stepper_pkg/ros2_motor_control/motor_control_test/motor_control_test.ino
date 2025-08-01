@@ -1,5 +1,6 @@
 #include <AccelStepper.h>
 #include <NewPing.h>
+#include <Servo.h>
 
 // 스텝모터, 스위치 핀 정의
 #define ENABLE_PIN_1 30
@@ -22,14 +23,17 @@
 #define HOME_SWITCH6 27
 
 // 초음파 센서 설정
-#define TRIG_PIN 8
-#define ECHO_PIN 9
+#define TRIG_PIN 9
+#define ECHO_PIN 8
 #define MAX_DIST_CM 200
-#define ULTRA_INTERVAL_MS 100
+#define ULTRA_INTERVAL_MS 50
 NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DIST_CM);
 unsigned long lastUltraTime = 0;
 
 // 진공펌프 설정 (필요 시 정의 추가)
+Servo servo1;
+Servo servo2;
+
 
 // 스텝모터 객체 생성
 AccelStepper stepper_1(AccelStepper::DRIVER, STEP_PIN_1, DIR_PIN_1);
@@ -137,29 +141,29 @@ void setup() {
 
   Serial.println("setup started");
 
-  homeEndstop(stepper_1, HOME_SWITCH1, stepper_2, HOME_SWITCH3, HOMING_SPEED);
-  stepper_1.setCurrentPosition(0);
-  stepper_2.setCurrentPosition(0);
-  Serial.println("homing success. start line.");
-
-  homeEndstop(stepper_1, HOME_SWITCH2, stepper_2, HOME_SWITCH4, -HOMING_SPEED);
-
-  endSteps1 = abs(stepper_1.currentPosition());
-  endSteps2 = abs(stepper_2.currentPosition());
-  Serial.print("from start to end using steps 1 : "); Serial.println(endSteps1);
-  Serial.print("from start to end using steps 2 : "); Serial.println(endSteps2);
-
-  stepper_1.moveTo(0);
-  stepper_2.moveTo(0);
-  returnSteps1 = abs(stepper_1.distanceToGo());
-  returnSteps2 = abs(stepper_2.distanceToGo());
-
-  while (stepper_1.distanceToGo() != 0 || stepper_2.distanceToGo() != 0) {
-    stepper_1.run();
-    stepper_2.run();
-  }
-
-  homeEndstop2(stepper_3, HOME_SWITCH5, HOME_SWITCH6, HOMING_SPEED);
+//  homeEndstop(stepper_1, HOME_SWITCH1, stepper_2, HOME_SWITCH3, HOMING_SPEED);
+//  stepper_1.setCurrentPosition(0);
+//  stepper_2.setCurrentPosition(0);
+//  Serial.println("homing success. start line.");
+//
+//  homeEndstop(stepper_1, HOME_SWITCH2, stepper_2, HOME_SWITCH4, -HOMING_SPEED);
+//
+//  endSteps1 = abs(stepper_1.currentPosition());
+//  endSteps2 = abs(stepper_2.currentPosition());
+//  Serial.print("from start to end using steps 1 : "); Serial.println(endSteps1);
+//  Serial.print("from start to end using steps 2 : "); Serial.println(endSteps2);
+//
+//  stepper_1.moveTo(0);
+//  stepper_2.moveTo(0);
+//  returnSteps1 = abs(stepper_1.distanceToGo());
+//  returnSteps2 = abs(stepper_2.distanceToGo());
+//
+//  while (stepper_1.distanceToGo() != 0 || stepper_2.distanceToGo() != 0) {
+//    stepper_1.run();
+//    stepper_2.run();
+//  }
+//
+//  homeEndstop2(stepper_3, HOME_SWITCH5, HOME_SWITCH6, HOMING_SPEED);
 
   stepper_1.setPinsInverted(true, false);
   stepper_2.setPinsInverted(true, false);
@@ -167,35 +171,41 @@ void setup() {
   stepPerMmX1 = endSteps1 / MAX_X_MM;
   stepPerMmX2 = endSteps2 / MAX_X_MM;
   stepPerMmY = endStepsY / MAX_Y_MM;
+
+  servo1.attach(6);
+  servo2.attach(7);
+  servo1.write(0);
+  servo2.write(0);
 }
 
 void loop() {
   // 초음파 거리 측정
   if (millis() - lastUltraTime >= ULTRA_INTERVAL_MS) {
     lastUltraTime = millis();
-    unsigned int dist_mm = sonar.ping_cm() * 10;
+    unsigned int uS = sonar.ping();
+    float dist_mm = (uS * 0.343f) / 2.0f;
     Serial.print("DIST:");
     Serial.println(dist_mm);
   }
 
   // 시리얼 명령 처리
-  if (Serial.available()) {
-    String line = Serial.readStringUntil('\n');
-    int comma = line.indexOf(',');
-    float x_mm = line.substring(0, comma).toFloat();
-    float y_mm = line.substring(comma + 1).toFloat();
-
-    long targetX1 = lround(x_mm * stepPerMmX1);
-    long targetX2 = lround(x_mm * stepPerMmX2);
-    long targetY = lround(y_mm * stepPerMmY);
-
-    stepper_1.moveTo(targetX1);
-    stepper_2.moveTo(targetX2);
-    stepper_3.moveTo(targetY);
-    Serial.println("DONE");
-  }
-
-  if (stepper_1.distanceToGo() != 0) stepper_1.run();
-  if (stepper_2.distanceToGo() != 0) stepper_2.run();
-  if (stepper_3.distanceToGo() != 0) stepper_3.run();
+//  if (Serial.available()) {
+//    String line = Serial.readStringUntil('\n');
+//    int comma = line.indexOf(',');
+//    float x_mm = line.substring(0, comma).toFloat();
+//    float y_mm = line.substring(comma + 1).toFloat();
+//
+//    long targetX1 = lround(x_mm * stepPerMmX1);
+//    long targetX2 = lround(x_mm * stepPerMmX2);
+//    long targetY = lround(y_mm * stepPerMmY);
+//
+//    stepper_1.moveTo(targetX1);
+//    stepper_2.moveTo(targetX2);
+//    stepper_3.moveTo(targetY);
+//    Serial.println("DONE");
+//  }
+//
+//  if (stepper_1.distanceToGo() != 0) stepper_1.run();
+//  if (stepper_2.distanceToGo() != 0) stepper_2.run();
+//  if (stepper_3.distanceToGo() != 0) stepper_3.run();
 }
