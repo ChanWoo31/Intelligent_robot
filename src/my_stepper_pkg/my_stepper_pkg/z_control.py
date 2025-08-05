@@ -41,7 +41,7 @@ class ZControl(Node):
         self.kp = 10.0 # 튜닝 필요
         self.deadband = 20.0 # mm단위 허용 오차
 
-        self.create_subscription(Point,   'packing_position',    self.cb_target, 10)
+        self.create_subscription(Point,   'move_position',    self.cb_target, 10)
         self.create_subscription(Float32, 'ultrasonic_distance', self.cb_current,10)
         self.z_done_pub = self.create_publisher(Bool, 'z_done', 10)
 

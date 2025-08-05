@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
             'serial_bridge = my_stepper_pkg.serial_bridge:main',
             'z_control = my_stepper_pkg.z_control:main',
+            'packer_controller = my_stepper_pkg.packer_controller:main',
         ],
     },
 )

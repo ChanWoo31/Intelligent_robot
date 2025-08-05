@@ -31,8 +31,16 @@ NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DIST_CM);
 unsigned long lastUltraTime = 0;
 
 // 진공펌프 설정 (필요 시 정의 추가)
-Servo servo1;
-Servo servo2;
+#define PUMP_SERVO_PIN 6
+#define SOLENOID_SERVO_PIN 7
+
+const uint8_t PUMP_ON_ANGLE = 180;
+const uint8_t PUMP_OFF_ANGLE = 0;
+const uint8_t SOLENOID_OPEN_ANGLE = 0;
+const uint8_t SOLENOID_CLOSE_ANGLE = 180;
+
+Servo pumpServo;
+Servo solenoidServo;
 
 
 // 스텝모터 객체 생성
@@ -172,10 +180,10 @@ void setup() {
   stepPerMmX2 = endSteps2 / MAX_X_MM;
   stepPerMmY = endStepsY / MAX_Y_MM;
 
-  servo1.attach(6);
-  servo2.attach(7);
-  servo1.write(0);
-  servo2.write(0);
+  pumpServo.attach(PUMP_SERVO_PIN);
+  solenoidServo.attach(SOLENOID_SERVO_PIN);
+  pumpServo.write(PUMP_OFF_ANGLE);
+  solenoidServo.write(SOLENOID_CLOSE_ANGLE);
 }
 
 void loop() {
@@ -189,8 +197,24 @@ void loop() {
   }
 
   // 시리얼 명령 처리
-//  if (Serial.available()) {
-//    String line = Serial.readStringUntil('\n');
+  if (Serial.available()) {
+    String line = Serial.readStringUntil('\n');
+    line.trim();
+
+    if (line == "V1") {
+      pumpServo.write(PUMP_ON_ANGLE);
+      solenoidServo.write(SOLENOID_OPEN_ANGLE);
+      Serial.println("VACUUM: ON");
+      continue;
+    }
+    if (line == "V0") {
+      pumpServo.wirte(PUMP_OFF_ANGLE);
+      solenoidServo.write(SOLENOID_CLOSE_ANGLE);
+      Serial.println("VACUUM: OFF");
+      continue;
+    }
+
+    
 //    int comma = line.indexOf(',');
 //    float x_mm = line.substring(0, comma).toFloat();
 //    float y_mm = line.substring(comma + 1).toFloat();
@@ -203,7 +227,7 @@ void loop() {
 //    stepper_2.moveTo(targetX2);
 //    stepper_3.moveTo(targetY);
 //    Serial.println("DONE");
-//  }
+  }
 //
 //  if (stepper_1.distanceToGo() != 0) stepper_1.run();
 //  if (stepper_2.distanceToGo() != 0) stepper_2.run();

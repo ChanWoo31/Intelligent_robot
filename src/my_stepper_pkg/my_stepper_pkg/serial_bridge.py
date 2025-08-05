@@ -12,7 +12,7 @@ class StepperBridge(Node):
         self.ser = serial.Serial('/dev/ttyACM0', 1000000, timeout=0.1)
         self.target_sub = self.create_subscription(
             Point,
-            'packing_position',
+            'move_position',
             self.on_target,
             10
         )
@@ -53,6 +53,14 @@ class StepperBridge(Node):
         cmd = f"{x_mm:.3f},{y_mm:.3f}\n"
         self.ser.write(cmd.encode())
         self.get_logger().info(f"Sent to Arduino: {cmd.strip()}")
+
+    def cb_vacuum(self, msg: Bool):
+        if msg.data:
+            self.get_logger().info("Vacuum ON cmd received")
+            self.ser.write(b'V1\n')
+        else:
+            self.get_logger().info("Vacuum OFF cmd received")
+            self.ser.write(b'V0\n')
     
 def main(args=None):
     rclpy.init(args=args)
