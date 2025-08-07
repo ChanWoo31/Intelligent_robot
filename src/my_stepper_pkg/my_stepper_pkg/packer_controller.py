@@ -28,8 +28,13 @@ class PackerController(Node):
             self.state = 'GO_PICKUP'
 
     def cb_stepper(self, msg: Bool):
-        if msg.data:
-            self.get_logger().debug('-> stepper_done')
+        if not msg.data:
+            return
+        if self.state == 'WAIT_HOMING':
+            self.get_logger().info('Homing & XY-0 Origin homed - ready')
+            self.state = 'IDLE'
+        else:
+            self.get_logger().debug('-> stepper_done (move complete)')
             self.stepper_done = True
 
     def cb_z(self, msg: Bool):
@@ -47,7 +52,8 @@ class PackerController(Node):
     def run(self):
         # 1) 픽업 위치로
         if self.state == 'GO_PICKUP':
-            self.send_move(0.0, 0.0, 200.0)
+            # 이 픽업위치는 내가 정해놓은거라 나중에 이거 다른 노드에서 전달해줘야함
+            self.send_move(50.0, 50.0, 200.0)
             self.state = 'WAIT_PICKUP'
 
         # 2) 픽업 완료 -> 흡착 ON
@@ -68,7 +74,8 @@ class PackerController(Node):
             if self.stepper_done and self.z_done:
                 self.vac_pub.publish(Bool(data=False))
                 self.get_logger().info('-> Vacuum OFF')
-                self.state = 'GO_PICKUP'
+                self.state = 'IDLE'
+                self.place = None
 
 def main(args=None):
     rclpy.init(args=args)
@@ -79,11 +86,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-        
-
-
-
-
-
-

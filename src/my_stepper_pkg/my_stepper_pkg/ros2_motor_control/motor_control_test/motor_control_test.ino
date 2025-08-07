@@ -1,6 +1,6 @@
 #include <AccelStepper.h>
-#include <NewPing.h>
 #include <Servo.h>
+#include "Adafruit_VL53L0X.h"
 
 // 스텝모터, 스위치 핀 정의
 #define ENABLE_PIN_1 30
@@ -22,13 +22,8 @@
 #define HOME_SWITCH5 26
 #define HOME_SWITCH6 27
 
-// 초음파 센서 설정
-#define TRIG_PIN 9
-#define ECHO_PIN 8
-#define MAX_DIST_CM 200
-#define ULTRA_INTERVAL_MS 50
-NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DIST_CM);
-unsigned long lastUltraTime = 0;
+// 레이 센서 설정
+Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 
 // 진공펌프 설정 (필요 시 정의 추가)
 #define PUMP_SERVO_PIN 6
@@ -126,6 +121,11 @@ void homeEndstop2(AccelStepper &mA, int swA, int swB, float speed) {
 void setup() {
   Serial.begin(1000000);
 
+  if (!lox.begin()) {
+    Serial.println("VL53L0X init failed!");
+    while (1);
+  }
+
   pinMode(ENABLE_PIN_1, OUTPUT);
   pinMode(ENABLE_PIN_2, OUTPUT);
   pinMode(ENABLE_PIN_3, OUTPUT);
@@ -149,29 +149,29 @@ void setup() {
 
   Serial.println("setup started");
 
-//  homeEndstop(stepper_1, HOME_SWITCH1, stepper_2, HOME_SWITCH3, HOMING_SPEED);
-//  stepper_1.setCurrentPosition(0);
-//  stepper_2.setCurrentPosition(0);
-//  Serial.println("homing success. start line.");
-//
-//  homeEndstop(stepper_1, HOME_SWITCH2, stepper_2, HOME_SWITCH4, -HOMING_SPEED);
-//
-//  endSteps1 = abs(stepper_1.currentPosition());
-//  endSteps2 = abs(stepper_2.currentPosition());
-//  Serial.print("from start to end using steps 1 : "); Serial.println(endSteps1);
-//  Serial.print("from start to end using steps 2 : "); Serial.println(endSteps2);
-//
-//  stepper_1.moveTo(0);
-//  stepper_2.moveTo(0);
-//  returnSteps1 = abs(stepper_1.distanceToGo());
-//  returnSteps2 = abs(stepper_2.distanceToGo());
-//
-//  while (stepper_1.distanceToGo() != 0 || stepper_2.distanceToGo() != 0) {
-//    stepper_1.run();
-//    stepper_2.run();
-//  }
-//
-//  homeEndstop2(stepper_3, HOME_SWITCH5, HOME_SWITCH6, HOMING_SPEED);
+  homeEndstop(stepper_1, HOME_SWITCH1, stepper_2, HOME_SWITCH3, HOMING_SPEED);
+  stepper_1.setCurrentPosition(0);
+  stepper_2.setCurrentPosition(0);
+  Serial.println("homing success. start line.");
+
+  homeEndstop(stepper_1, HOME_SWITCH2, stepper_2, HOME_SWITCH4, -HOMING_SPEED);
+
+  endSteps1 = abs(stepper_1.currentPosition());
+  endSteps2 = abs(stepper_2.currentPosition());
+  Serial.print("from start to end using steps 1 : "); Serial.println(endSteps1);
+  Serial.print("from start to end using steps 2 : "); Serial.println(endSteps2);
+
+  stepper_1.moveTo(0);
+  stepper_2.moveTo(0);
+  returnSteps1 = abs(stepper_1.distanceToGo());
+  returnSteps2 = abs(stepper_2.distanceToGo());
+
+  while (stepper_1.distanceToGo() != 0 || stepper_2.distanceToGo() != 0) {
+    stepper_1.run();
+    stepper_2.run();
+  }
+
+  homeEndstop2(stepper_3, HOME_SWITCH5, HOME_SWITCH6, HOMING_SPEED);
 
   stepper_1.setPinsInverted(true, false);
   stepper_2.setPinsInverted(true, false);
@@ -184,17 +184,26 @@ void setup() {
   solenoidServo.attach(SOLENOID_SERVO_PIN);
   pumpServo.write(PUMP_OFF_ANGLE);
   solenoidServo.write(SOLENOID_CLOSE_ANGLE);
+
+  // 호밍 끝
+  Serial.println("DONE");
 }
 
 void loop() {
-  // 초음파 거리 측정
-  if (millis() - lastUltraTime >= ULTRA_INTERVAL_MS) {
-    lastUltraTime = millis();
-    unsigned int uS = sonar.ping();
-    float dist_mm = (uS * 0.343f) / 2.0f;
+  // 레이저 거리 측정
+  VL53L0X_RangingMeasurementData_t measure;
+
+  lox.rangingTest(&measure, false);
+
+  if (measure.RangeStatus != 4) {
     Serial.print("DIST:");
-    Serial.println(dist_mm);
+    Serial.println(measure.RangeMilliMeter);
+  } else {
+    Serial.print("error, status: ");
+    Serial.println(measure.RangeStatus);
   }
+
+
 
   // 시리얼 명령 처리
   if (Serial.available()) {
@@ -205,31 +214,32 @@ void loop() {
       pumpServo.write(PUMP_ON_ANGLE);
       solenoidServo.write(SOLENOID_OPEN_ANGLE);
       Serial.println("VACUUM: ON");
-      continue;
+      return;
     }
-    if (line == "V0") {
-      pumpServo.wirte(PUMP_OFF_ANGLE);
+    else if (line == "V0") {
+      pumpServo.write(PUMP_OFF_ANGLE);
       solenoidServo.write(SOLENOID_CLOSE_ANGLE);
       Serial.println("VACUUM: OFF");
-      continue;
+      return;
     }
 
-    
-//    int comma = line.indexOf(',');
-//    float x_mm = line.substring(0, comma).toFloat();
-//    float y_mm = line.substring(comma + 1).toFloat();
-//
-//    long targetX1 = lround(x_mm * stepPerMmX1);
-//    long targetX2 = lround(x_mm * stepPerMmX2);
-//    long targetY = lround(y_mm * stepPerMmY);
-//
-//    stepper_1.moveTo(targetX1);
-//    stepper_2.moveTo(targetX2);
-//    stepper_3.moveTo(targetY);
-//    Serial.println("DONE");
+    else{
+      int comma = line.indexOf(',');
+      float x_mm = line.substring(0, comma).toFloat();
+      float y_mm = line.substring(comma + 1).toFloat();
+  
+      long targetX1 = lround(x_mm * stepPerMmX1);
+      long targetX2 = lround(x_mm * stepPerMmX2);
+      long targetY = lround(y_mm * stepPerMmY);
+  
+      stepper_1.moveTo(targetX1);
+      stepper_2.moveTo(targetX2);
+      stepper_3.moveTo(targetY);
+      Serial.println("DONE");
+    }
   }
 //
-//  if (stepper_1.distanceToGo() != 0) stepper_1.run();
-//  if (stepper_2.distanceToGo() != 0) stepper_2.run();
-//  if (stepper_3.distanceToGo() != 0) stepper_3.run();
+  if (stepper_1.distanceToGo() != 0) stepper_1.run();
+  if (stepper_2.distanceToGo() != 0) stepper_2.run();
+  if (stepper_3.distanceToGo() != 0) stepper_3.run();
 }
